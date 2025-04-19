@@ -52,7 +52,7 @@ public class TournamentGUI extends JFrame implements ActionListener {
         signInPanel.add(signInButton);
         signInPanel.add(signOutButton);
 
-        JButton createUserButton = new JButton("Create User");
+        createUserButton = new JButton("Create User");
         createUserButton.addActionListener(this);
         signInPanel.add(createUserButton);
 
@@ -96,14 +96,11 @@ public class TournamentGUI extends JFrame implements ActionListener {
             }
             updateDetails();
         } else if (e.getSource() == viewLeaderboardButton) {
-            // Display leaderboard (Placeholder)
-            System.out.println("View Leaderboard button clicked");
-            JOptionPane.showMessageDialog(this, "Leaderboard functionality not yet implemented.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, tournament.getLeaderboard(), "Leaderboard", JOptionPane.INFORMATION_MESSAGE);
         } else if (e.getSource() == signInButton) {
             String username = usernameField.getText();
             String password = new String(((JPasswordField) passwordField).getPassword());
 
-            // Find user (Placeholder)
             User user = findUser(username);
 
             if (user != null && user.verifyPassword(password)) {
@@ -119,54 +116,45 @@ public class TournamentGUI extends JFrame implements ActionListener {
             updateDetails();
             updateButtonVisibility();
             JOptionPane.showMessageDialog(this, "Signed out successfully!", "Info", JOptionPane.INFORMATION_MESSAGE);
-        }  else if (e.getSource() == createUserButton) {
+        } else if (e.getSource() == createUserButton) {
             createUser();
         }
     }
 
-    private void handleCreateUser() {
-        createUser();
-    }
-
-    // Placeholder method to find user
     private User findUser(String username) {
         System.out.println("Finding user: " + username);
-        // In real implementation, this would search a database or list of users
         if (username.equals("admin")) {
-            System.out.println("Admin user found!");
             return new Admin(1, "Admin User", "USA");
         }
-        System.out.println("User not found.");
         return null;
     }
 
     private void createUser() {
-        String idStr = JOptionPane.showInputDialog(this, "Enter User ID:");
-        String name = JOptionPane.showInputDialog(this, "Enter Name:");
-        String country = JOptionPane.showInputDialog(this, "Enter Country:");
         String username = JOptionPane.showInputDialog(this, "Enter Username:");
-        String password = JOptionPane.showInputDialog(this, "Enter Password:");
+        String ratingStr = JOptionPane.showInputDialog(this, "Enter Rating:");
+        String country = JOptionPane.showInputDialog(this, "Enter Country:");
 
         try {
-            int id = Integer.parseInt(idStr);
-            User newUser = User.createUser(id, name, country, username, password);
-            if (newUser != null) {
-                JOptionPane.showMessageDialog(this, "User created successfully!", "Info", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(this, "Failed to create user.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
+            int rating = Integer.parseInt(ratingStr);
+            Player newPlayer = new Player(username, rating, country);
+            tournament.addPlayer(newPlayer);
+            JOptionPane.showMessageDialog(this, "Player created successfully!", "Info", JOptionPane.INFORMATION_MESSAGE);
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Invalid User ID.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Invalid rating.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     public static void main(String[] args) {
         Tournament tournament = new Tournament(1, "Chess Championship", "New York",
                 "2025-05-01", "90+30", 5);
-        tournament.addPlayer(new Player(101, "Alice", "USA", 1500));
-        tournament.addPlayer(new Player(102, "Bob", "UK", 1600));
-        tournament.addPlayer(new Player(103, "Charlie", "Germany", 1700));
+
+        tournament.addPlayer(new Player("Alice", 1500, "USA"));
+        tournament.addPlayer(new Player("Bob", 1600, "UK"));
+        tournament.addPlayer(new Player("Charlie", 1700, "Germany"));
 
         SwingUtilities.invokeLater(() -> new TournamentGUI(tournament));
     }
 }
+
+
+
