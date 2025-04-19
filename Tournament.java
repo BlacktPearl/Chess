@@ -16,6 +16,27 @@ public class Tournament {
     private int currentRound;
     private int maxRounds;
 
+
+public String getLeaderboard() {
+    StringBuilder leaderboard = new StringBuilder("🏆 Leaderboard:\n");
+
+    // Sort players by rating descending
+    players.stream()
+        .sorted((p1, p2) -> Integer.compare(p2.getRating(), p1.getRating()))
+        .forEach(player -> {
+            leaderboard.append(player.getUsername())
+                .append(" (Rating: ")
+                .append(player.getRating())
+                .append(", Country: ")
+                .append(player.getCountry())
+                .append(")\n");
+        });
+
+    return leaderboard.toString();
+}
+
+
+
     public Tournament(int id, String name, String location, String startDate, String timeControl, int maxRounds) {
         this.tournamentID = id;
         this.name = name;
@@ -87,7 +108,7 @@ public class Tournament {
                 pairedPlayers.add(player2);
 
                 // In real system would create matches between player1 and player2
-                round.scheduleMatches();
+                round.scheduleMatches(players);
             }
 
             rounds.add(round);
@@ -167,3 +188,4 @@ public class Tournament {
         return status.equals("upcoming");
     }
 }
+
