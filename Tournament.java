@@ -31,13 +31,11 @@ public class Tournament {
 
     public boolean startTournament() {
         if (players.size() < 2) {
-            System.out.println("Cannot start tournament with less than 2 players");
-            return false;
+            throw new IllegalStateException("Cannot start tournament with less than 2 players");
         }
         
         if (!status.equals("upcoming")) {
-            System.out.println("Tournament has already started or completed");
-            return false;
+            throw new IllegalStateException("Tournament has already started or completed");
         }
 
         status = "in progress";
@@ -66,20 +64,55 @@ public class Tournament {
     public void scheduleRounds() {
         // Swiss tournament pairing
         Collections.sort(players, Comparator.comparingInt(Player::getRating).reversed());
-        
+
         for (int i = 0; i < maxRounds; i++) {
             Round round = new Round();
             round.setRoundID(i + 1);
-            
-            // Simple pairing algorithm (top half vs bottom half)
-            int half = players.size() / 2;
-            for (int j = 0; j < half; j++) {
-                // In real system would create matches between players[j] and players[j+half]
+
+            List<Player> pairedPlayers = new ArrayList<>();
+            List<Player> availablePlayers = new ArrayList<>(players);
+
+            while (availablePlayers.size() >= 2) {
+                Player player1 = availablePlayers.remove(0);
+                Player player2 = findBestOpponent(player1, availablePlayers, pairedPlayers);
+
+                if (player2 == null) {
+                    // No suitable opponent found, give bye to player1
+                    System.out.println("No suitable opponent found for " + player1.getName() + ", giving bye.");
+                    break; // or handle bye situation differently
+                }
+
+                availablePlayers.remove(player2);
+                pairedPlayers.add(player1);
+                pairedPlayers.add(player2);
+
+                // In real system would create matches between player1 and player2
                 round.scheduleMatches();
             }
-            
+
             rounds.add(round);
         }
+    }
+
+    private Player findBestOpponent(Player player1, List<Player> availablePlayers, List<Player> pairedPlayers) {
+        // Find the best opponent based on rating and previous opponents
+        Player bestOpponent = null;
+        int bestRatingDifference = Integer.MAX_VALUE;
+
+        for (Player player2 : availablePlayers) {
+            if (pairedPlayers.contains(player2)) {
+                continue; // Skip already paired players
+            }
+
+            int ratingDifference = Math.abs(player1.getRating() - player2.getRating());
+
+            if (ratingDifference < bestRatingDifference) {
+                bestOpponent = player2;
+                bestRatingDifference = ratingDifference;
+            }
+        }
+
+        return bestOpponent;
     }
 
     public boolean advanceRound() {
@@ -94,7 +127,16 @@ public class Tournament {
 
     public void endTournament() {
         status = "completed";
-        // Calculate final standings
+        System.out.println("Tournament " + name + " has ended!");
+
+        // Calculate final standings based on player ratings
+        Collections.sort(players, Comparator.comparingInt(Player::getRating).reversed());
+
+        System.out.println("\n--- Final Standings ---");
+        for (int i = 0; i < players.size(); i++) {
+            Player player = players.get(i);
+            System.out.println((i + 1) + ". " + player.getName() + " (Rating: " + player.getRating() + ")");
+        }
     }
 
     public String getTournamentDetails() {
@@ -107,11 +149,10 @@ public class Tournament {
     }
 
     public void setTimeControl(String timeControl) {
-        if (timeControl.matches("\\d+\\+\\d+")) {
-            this.timeControl = timeControl;
-        } else {
-            throw new IllegalArgumentException("Time control must be in format 'minutes+increment'");
+        if (timeControl == null || !timeControl.matches("\\d+\\+\\d+")) {
+            throw new IllegalArgumentException("Time control must be in format 'minutes+increment' (e.g., 60+15)");
         }
+        this.timeControl = timeControl;
     }
 
     public List<Player> getPlayers() {

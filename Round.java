@@ -4,7 +4,7 @@ import java.util.ArrayList;
 public class Round {
     private int roundID;
     private List<Match> matches;
-    private String status; 
+    private String status;
 
     public Round() {
         matches = new ArrayList<>();
@@ -18,7 +18,7 @@ public class Round {
         
         // For demo purposes, create 4 sample matches
         for (int i = 0; i < 4; i++) {
-            matches.add(String.format("Match-%d-%d", currentTime, i+1));
+            matches.add(new Match((int)currentTime + i));
         }
         System.out.println("Scheduled " + matches.size() + " matches for round " + roundID);
     }

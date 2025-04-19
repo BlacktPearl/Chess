@@ -92,4 +92,13 @@ public class User {
             return false;
         }
     }
+
+    public static User createUser(int ID, String name, String country, String username, String password) {
+        User newUser = new User(ID, name, country);
+        if (newUser.login(username, password)) {
+            return newUser;
+        } else {
+            return null;
+        }
+    }
 }
