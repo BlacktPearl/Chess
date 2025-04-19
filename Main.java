@@ -1,18 +1,16 @@
 public class Main {
     public static void main(String[] args) {
-        Player player1 = new Player("Alice", 1500, "USA");
-        Player player2 = new Player("Bob", 1450, "UK");
-
-        Match match = new Match(1, player1, player2, "10|0");
-        match.startMatch();
-
-        // Example manual move input
-        Move move1 = new Move("e2", "e4", "P", "2025-04-17 10:00", true, player1);
-        match.recordMove(move1);
-
-        for (Move m : match.getMoveHistory()) {
-            System.out.println(m.getMoveDetails());
-        }
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            Player[] players = MatchGUI.showRegistrationDialog();
+            if (players != null && players.length == 2) {
+                Match match = new Match(1, players[0], players[1], "10|0");
+                match.startMatch();
+                new MatchGUI(match).setVisible(true);
+            } else {
+                System.out.println("Match canceled or not enough players.");
+            }
+        });
     }
 }
+
 
