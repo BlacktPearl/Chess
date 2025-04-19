@@ -280,5 +280,3 @@ public class MatchGUI extends JFrame {
 }
 
 
-}
-
