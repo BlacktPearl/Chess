@@ -66,4 +66,3 @@ public class Admin extends User {
         return true;
     }
 }
-
