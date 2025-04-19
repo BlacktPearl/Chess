@@ -1,4 +1,4 @@
-// hey this is just a dummy, replace it with Hana's Player class
+// just  a dummy for me to test
 
 
 public class Player {
