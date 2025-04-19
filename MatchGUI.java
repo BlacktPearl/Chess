@@ -3,6 +3,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MatchGUI extends JFrame {
     private Match match;
@@ -89,7 +91,7 @@ public class MatchGUI extends JFrame {
 
     private class ChessBoardPanel extends JPanel {
         private JLabel[][] squares = new JLabel[8][8];
-        private java.util.Map<String, String> piecePositions = new java.util.HashMap<>();
+        private Map<String, String> piecePositions = new HashMap<>();
 
         public ChessBoardPanel() {
             setLayout(new GridLayout(8, 8));
@@ -219,16 +221,64 @@ public class MatchGUI extends JFrame {
         }
     }
 
-    public static void main(String[] args) {
-        Player p1 = new Player("Alice", 1500, "USA");
-        Player p2 = new Player("Bob", 1400, "UK");
-        Match m = new Match(1, p1, p2, "10|0");
-        m.startMatch();
+    public static Player[] showRegistrationDialog() {
+        JTextField name1 = new JTextField();
+        JTextField country1 = new JTextField();
+        JTextField rating1 = new JTextField();
 
+        JTextField name2 = new JTextField();
+        JTextField country2 = new JTextField();
+        JTextField rating2 = new JTextField();
+
+        JPanel panel = new JPanel(new GridLayout(0, 2));
+        panel.add(new JLabel("Player 1 (White) Username:"));
+        panel.add(name1);
+        panel.add(new JLabel("Country:"));
+        panel.add(country1);
+        panel.add(new JLabel("Rating:"));
+        panel.add(rating1);
+
+        panel.add(new JLabel("Player 2 (Black) Username:"));
+        panel.add(name2);
+        panel.add(new JLabel("Country:"));
+        panel.add(country2);
+        panel.add(new JLabel("Rating:"));
+        panel.add(rating2);
+
+        int result = JOptionPane.showConfirmDialog(null, panel, "Register Players",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            try {
+                Player p1 = new Player(name1.getText(), Integer.parseInt(rating1.getText()), country1.getText());
+                Player p2 = new Player(name2.getText(), Integer.parseInt(rating2.getText()), country2.getText());
+                return new Player[]{p1, p2};
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Invalid rating input. Please use numbers.");
+            }
+        }
+        return null;
+    }
+
+    public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            MatchGUI gui = new MatchGUI(m);
+            Player[] players = showRegistrationDialog();
+            if (players == null) return;
+
+            String timeControl = JOptionPane.showInputDialog(null, "Enter time control (e.g., 10|0):", "10|0");
+            if (timeControl == null || timeControl.trim().isEmpty()) {
+                timeControl = "10|0"; // default fallback
+            }
+
+            Match match = new Match(1, players[0], players[1], timeControl);
+            match.startMatch();
+
+            MatchGUI gui = new MatchGUI(match);
             gui.setVisible(true);
         });
     }
+}
+
+
 }
 
