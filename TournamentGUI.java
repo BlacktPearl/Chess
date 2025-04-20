@@ -103,7 +103,7 @@ public class TournamentGUI extends JFrame implements ActionListener {
 
             User user = findUser(username);
 
-            if (user != null && user.verifyPassword(password)) {
+            if (user != null && user.verifyPasswordHash(password, user.passwordHash)) {
                 currentUser = user;
                 updateDetails();
                 updateButtonVisibility();
@@ -124,7 +124,7 @@ public class TournamentGUI extends JFrame implements ActionListener {
     private User findUser(String username) {
         System.out.println("Finding user: " + username);
         if (username.equals("admin")) {
-            return new Admin(1, "Admin User", "USA");
+            return new Admin(1, "Admin User", "USA", "admin", "password", 1);
         }
         return null;
     }
@@ -155,6 +155,3 @@ public class TournamentGUI extends JFrame implements ActionListener {
         SwingUtilities.invokeLater(() -> new TournamentGUI(tournament));
     }
 }
-
-
-

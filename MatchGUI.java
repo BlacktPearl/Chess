@@ -221,40 +221,66 @@ public class MatchGUI extends JFrame {
         }
     }
 
-    public static Player[] showRegistrationDialog() {
-        JTextField name1 = new JTextField();
-        JTextField country1 = new JTextField();
-        JTextField rating1 = new JTextField();
-
-        JTextField name2 = new JTextField();
-        JTextField country2 = new JTextField();
-        JTextField rating2 = new JTextField();
+    public static User showRegistrationDialog() {
+        JTextField name = new JTextField();
+        JTextField country = new JTextField();
+        JTextField username = new JTextField();
+        JPasswordField password = new JPasswordField();
+        String[] roles = {"Player", "Admin", "Referee"};
+        JComboBox<String> roleList = new JComboBox<>(roles);
 
         JPanel panel = new JPanel(new GridLayout(0, 2));
-        panel.add(new JLabel("Player 1 (White) Username:"));
-        panel.add(name1);
+        panel.add(new JLabel("Name:"));
+        panel.add(name);
         panel.add(new JLabel("Country:"));
-        panel.add(country1);
-        panel.add(new JLabel("Rating:"));
-        panel.add(rating1);
+        panel.add(country);
+        panel.add(new JLabel("Username:"));
+        panel.add(username);
+        panel.add(new JLabel("Password:"));
+        panel.add(password);
+        panel.add(new JLabel("Role:"));
+        panel.add(roleList);
 
-        panel.add(new JLabel("Player 2 (Black) Username:"));
-        panel.add(name2);
-        panel.add(new JLabel("Country:"));
-        panel.add(country2);
-        panel.add(new JLabel("Rating:"));
-        panel.add(rating2);
-
-        int result = JOptionPane.showConfirmDialog(null, panel, "Register Players",
+        int result = JOptionPane.showConfirmDialog(null, panel, "Register User",
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
         if (result == JOptionPane.OK_OPTION) {
-            try {
-                Player p1 = new Player(name1.getText(), Integer.parseInt(rating1.getText()), country1.getText());
-                Player p2 = new Player(name2.getText(), Integer.parseInt(rating2.getText()), country2.getText());
-                return new Player[]{p1, p2};
-            } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(null, "Invalid rating input. Please use numbers.");
+            String selectedRole = (String) roleList.getSelectedItem();
+            int roleId = 0;
+            if (selectedRole.equals("Admin")) {
+                roleId = 1;
+            } else if (selectedRole.equals("Referee")) {
+                roleId = 2;
+            }
+            // Generate a unique ID for the user
+            int userId = (int) (Math.random() * 1000); // Replace with a better ID generation strategy
+
+            User user = User.createUser(userId, name.getText(), country.getText(), username.getText(), new String(password.getPassword()), roleId);
+            return user;
+        }
+        return null;
+    }
+
+    public static User showLoginDialog() {
+        JTextField username = new JTextField();
+        JPasswordField password = new JPasswordField();
+
+        JPanel panel = new JPanel(new GridLayout(0, 2));
+        panel.add(new JLabel("Username:"));
+        panel.add(username);
+        panel.add(new JLabel("Password:"));
+        panel.add(password);
+
+        int result = JOptionPane.showConfirmDialog(null, panel, "Login",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            User user = new User(0, "", "", username.getText(), "", 0); // Dummy user object
+            if (user.login(username.getText(), new String(password.getPassword()))) {
+                return user;
+            } else {
+                JOptionPane.showMessageDialog(null, "Invalid username or password.");
+                return null;
             }
         }
         return null;
@@ -262,21 +288,53 @@ public class MatchGUI extends JFrame {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            Player[] players = showRegistrationDialog();
-            if (players == null) return;
+            User user = showLoginDialog();
+            if (user == null) {
+                user = showRegistrationDialog();
+                if (user == null) return;
+            }
 
             String timeControl = JOptionPane.showInputDialog(null, "Enter time control (e.g., 10|0):", "10|0");
             if (timeControl == null || timeControl.trim().isEmpty()) {
                 timeControl = "10|0"; // default fallback
             }
 
-            Match match = new Match(1, players[0], players[1], timeControl);
+            // Create two Player objects for testing purposes
+            Player player1 = new Player(user.getName(), 1200, user.getCountry());
+            Player player2 = new Player("Opponent", 1200, "USA");
+
+            Match match = new Match(1, player1, player2, timeControl);
             match.startMatch();
 
-            MatchGUI gui = new MatchGUI(match);
-            gui.setVisible(true);
+            int role = user.getRole();
+            if (role == 0) {
+                // Player
+                // For now, show training board for all players
+                SwingUtilities.invokeLater(() -> {
+                    TrainingBoardGUI trainingBoardGUI = new TrainingBoardGUI();
+                    trainingBoardGUI.setVisible(true);
+                });
+            } else if (role == 1) {
+                // Admin
+                showAdminScreen();
+            } else if (role == 2) {
+                // Referee
+                showRefereeScreen();
+            }
+        });
+    }
+
+    private static void showAdminScreen() {
+        SwingUtilities.invokeLater(() -> {
+            AdminGUI adminGUI = new AdminGUI();
+            adminGUI.setVisible(true);
+        });
+    }
+
+    private static void showRefereeScreen() {
+        SwingUtilities.invokeLater(() -> {
+            RefereeGUI refereeGUI = new RefereeGUI();
+            refereeGUI.setVisible(true);
         });
     }
 }
-
-

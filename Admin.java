@@ -5,8 +5,8 @@ public class Admin extends User {
     private List<Integer> managedTournaments;
     private int maxTournaments = 10;
 
-    public Admin(int ID, String name, String country) {
-        super(ID, name, country);
+    public Admin(int ID, String name, String country, String username, String passwordHash, int role) {
+        super(ID, name, country, username, passwordHash, role);
         this.managedTournaments = new ArrayList<>();
     }
 
