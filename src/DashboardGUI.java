@@ -331,6 +331,7 @@ public class DashboardGUI extends JFrame {
         
         JLabel actionsTitle = new JLabel("Quick Actions");
         actionsTitle.setFont(HEADER_FONT);
+        actionsTitle.setForeground(TEXT_COLOR);
         actionsTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         // Create action buttons
@@ -345,11 +346,15 @@ public class DashboardGUI extends JFrame {
             updateSidebarSelection("profile");
         });
         
+        JButton trainingButton = createActionButton("Training Board", e -> openTrainingBoard());
+        
         actionsPanel.add(actionsTitle);
         actionsPanel.add(Box.createVerticalStrut(20));
         actionsPanel.add(playButton);
         actionsPanel.add(Box.createVerticalStrut(10));
         actionsPanel.add(browseButton);
+        actionsPanel.add(Box.createVerticalStrut(10));
+        actionsPanel.add(trainingButton);
         actionsPanel.add(Box.createVerticalStrut(10));
         actionsPanel.add(profileButton);
         
@@ -397,25 +402,36 @@ public class DashboardGUI extends JFrame {
     
     private JButton createActionButton(String text, ActionListener action) {
         JButton button = new JButton(text);
-        button.setFont(REGULAR_FONT);
-        button.setForeground(Color.WHITE);
-        button.setBackground(PRIMARY_COLOR);
+        button.setFont(BUTTON_FONT);
+        button.setForeground(TEXT_COLOR);
+        button.setBackground(Color.WHITE);
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(FIELD_BORDER),
+            BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        ));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        button.setBorderPainted(false);
         button.setAlignmentX(Component.LEFT_ALIGNMENT);
-        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
         
         // Add hover effect
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                button.setBackground(DARKER_PRIMARY);
+                button.setBackground(FIELD_BACKGROUND);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(PRIMARY_COLOR),
+                    BorderFactory.createEmptyBorder(10, 15, 10, 15)
+                ));
             }
             
             @Override
             public void mouseExited(MouseEvent e) {
-                button.setBackground(PRIMARY_COLOR);
+                button.setBackground(Color.WHITE);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(FIELD_BORDER),
+                    BorderFactory.createEmptyBorder(10, 15, 10, 15)
+                ));
             }
         });
         
@@ -439,11 +455,7 @@ public class DashboardGUI extends JFrame {
         
         // Only show create tournament button for admins
         if (currentUser instanceof Admin) {
-            JButton createButton = new JButton("Create Tournament");
-            createButton.setBackground(PRIMARY_COLOR);
-            createButton.setForeground(LIGHT_TEXT);
-            createButton.setFont(BUTTON_FONT);
-            createButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            JButton createButton = createPrimaryButton("Create Tournament");
             createButton.addActionListener(e -> createNewTournament());
             headerPanel.add(createButton, BorderLayout.EAST);
         }
@@ -464,39 +476,34 @@ public class DashboardGUI extends JFrame {
             {"Nanjing Tournament", "南京 (Nanjing)", "2024-05-18", "upcoming", "2"},
             {"Shenzhen Championship", "深圳 (Shenzhen)", "2024-06-25", "upcoming", "3"},
             {"Xi'an Ancient City Cup", "西安 (Xi'an)", "2024-07-30", "upcoming", "0"},
-            {"Suzhou Masters", "苏州 (Suzhou)", "2024-08-15", "upcoming", "5"}
+            {"Suzhou Masters", "苏州 (Suzhou)", "2024-08-15", "upcoming", "5"},
         };
         
-        // Create a table model that doesn't allow editing
-        DefaultTableModel model = new DefaultTableModel(data, columnNames) {
+        JTable table = new JTable(data, columnNames) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false;
+                return false; // Make table read-only
             }
         };
         
-        // Create and configure the table
-        JTable table = new JTable(model);
+        // Modern table styling
         table.setRowHeight(40);
-        table.setFont(REGULAR_FONT);
-        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setShowGrid(false);
         table.setIntercellSpacing(new Dimension(0, 0));
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setBackground(Color.WHITE);
+        table.setSelectionBackground(new Color(232, 240, 254));
+        table.setSelectionForeground(PRIMARY_COLOR);
         
-        // Add custom renderer for alternating row colors and highlighting selected row
-        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+        // Custom cell renderer for better appearance
+        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, 
                     boolean isSelected, boolean hasFocus, int row, int column) {
-                
                 Component c = super.getTableCellRendererComponent(
-                        table, value, isSelected, hasFocus, row, column);
+                    table, value, isSelected, hasFocus, row, column);
                 
-                if (isSelected) {
-                    // Selected row
-                    c.setBackground(new Color(230, 240, 255));
-                    c.setForeground(PRIMARY_COLOR);
-                    } else {
+                if (!isSelected) {
                     // Alternating row colors
                     if (row % 2 == 0) {
                         c.setBackground(Color.WHITE);
@@ -509,7 +516,7 @@ public class DashboardGUI extends JFrame {
                 ((JLabel) c).setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
                 return c;
             }
-        });
+        };
         
         // Configure column widths
         table.getColumnModel().getColumn(0).setPreferredWidth(200); // Name
@@ -525,6 +532,11 @@ public class DashboardGUI extends JFrame {
         header.setFont(new Font(REGULAR_FONT.getName(), Font.BOLD, REGULAR_FONT.getSize()));
         header.setBorder(BorderFactory.createLineBorder(FIELD_BORDER));
         
+        // Apply the renderer to all columns
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(renderer);
+        }
+        
         // Wrap in a scroll pane
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createLineBorder(FIELD_BORDER));
@@ -533,21 +545,13 @@ public class DashboardGUI extends JFrame {
         panel.add(scrollPane, BorderLayout.CENTER);
         
         // Action buttons panel
-        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         actionsPanel.setOpaque(false);
         
-        JButton viewButton = new JButton("View Details");
-        viewButton.setBackground(SECONDARY_COLOR);
-        viewButton.setForeground(LIGHT_TEXT);
-        viewButton.setFont(BUTTON_FONT);
-        viewButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JButton viewButton = createSecondaryButton("View Details");
         viewButton.setEnabled(false); // Initially disabled
         
-        JButton joinButton = new JButton("Join Tournament");
-        joinButton.setBackground(PRIMARY_COLOR);
-        joinButton.setForeground(LIGHT_TEXT);
-        joinButton.setFont(BUTTON_FONT);
-        joinButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JButton joinButton = createPrimaryButton("Join Tournament");
         joinButton.setEnabled(false); // Initially disabled
         
         actionsPanel.add(viewButton);

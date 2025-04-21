@@ -72,6 +72,9 @@ public class TrainingBoardGUI extends JFrame {
         add(boardPanel, BorderLayout.CENTER);
         add(controlPanel, BorderLayout.EAST);
         add(statusPanel, BorderLayout.SOUTH);
+        
+        // Initialize the board with pieces
+        setupPieces();
     }
     
     private JPanel createHeaderPanel() {
@@ -527,6 +530,8 @@ public class TrainingBoardGUI extends JFrame {
     private void setPiece(int col, int row, String piece) {
         String symbol = getSymbol(piece);
         squares[row][col].setText(symbol);
+        squares[row][col].setForeground(piece.startsWith("w") ? Color.BLACK : Color.BLACK);
+        squares[row][col].setFont(PIECE_FONT);
         piecePositions.put(posKey(col, row), piece);
     }
 
@@ -536,6 +541,7 @@ public class TrainingBoardGUI extends JFrame {
     }
 
     private String getSymbol(String piece) {
+        // Use larger, more visible chess symbols
         switch (piece) {
             case "wP": return "♙";
             case "wR": return "♖";
