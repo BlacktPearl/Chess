@@ -92,6 +92,10 @@ public class Match {
         return status;
     }
 
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
     public boolean isWhiteTurn() {
         return isWhiteTurn;
     }

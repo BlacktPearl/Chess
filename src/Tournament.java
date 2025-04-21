@@ -187,5 +187,25 @@ public String getLeaderboard() {
     public boolean isRegistrationOpen() {
         return status.equals("upcoming");
     }
+
+    public int getTournamentID() {
+        return tournamentID;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getStartDate() {
+        return startDate;
+    }
+    
+    public String getLocation() {
+        return location;
+    }
+    
+    public String getStatus() {
+        return status;
+    }
 }
 

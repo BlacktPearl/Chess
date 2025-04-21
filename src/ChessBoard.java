@@ -1,8 +1,18 @@
 import java.util.HashMap;
 import java.util.Map;
+import java.awt.Color;
 
 public class ChessBoard {
     private Map<String, String> board;
+    
+    // Color definitions for UI representation
+    public static final Color LIGHT_SQUARE_COLOR = new Color(240, 217, 181);
+    public static final Color DARK_SQUARE_COLOR = new Color(181, 136, 99);
+    public static final Color HIGHLIGHT_COLOR = new Color(255, 255, 0, 128);
+    
+    public ChessBoard() {
+        initializeBoard();
+    }
 
     public void initializeBoard() {
         board = new HashMap<>();
@@ -61,7 +71,72 @@ public class ChessBoard {
     }
 
     public Map<String, String> getBoard() {
-        return board;
+        return new HashMap<>(board);
+    }
+    
+    // Gets Unicode symbol for chess piece
+    public static String getUnicodeSymbol(String piece) {
+        if (piece == null) return "";
+        
+        switch (piece) {
+            case "wP": return "♙";
+            case "wR": return "♖";
+            case "wN": return "♘";
+            case "wB": return "♗";
+            case "wQ": return "♕";
+            case "wK": return "♔";
+            case "bP": return "♟";
+            case "bR": return "♜";
+            case "bN": return "♞";
+            case "bB": return "♝";
+            case "bQ": return "♛";
+            case "bK": return "♚";
+            default: return "";
+        }
+    }
+    
+    // Clear the board
+    public void clearBoard() {
+        board.clear();
+    }
+    
+    // Check if a position is in check
+    public boolean isInCheck(boolean isWhite) {
+        // Find the king position
+        String kingCode = isWhite ? "wK" : "bK";
+        String kingPos = null;
+        
+        for (Map.Entry<String, String> entry : board.entrySet()) {
+            if (entry.getValue().equals(kingCode)) {
+                kingPos = entry.getKey();
+                break;
+            }
+        }
+        
+        if (kingPos == null) return false;
+        
+        // Check if any opponent piece can attack the king
+        for (Map.Entry<String, String> entry : board.entrySet()) {
+            String piecePos = entry.getKey();
+            String pieceCode = entry.getValue();
+            
+            // If it's an opponent's piece
+            if (pieceCode.charAt(0) != (isWhite ? 'w' : 'b')) {
+                // Check if it can attack the king
+                if (isLegalMove(piecePos, kingPos, pieceCode.substring(1), !isWhite)) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    // Get original color of a square based on its algebraic notation
+    public static Color getOriginalColor(String pos) {
+        int col = pos.charAt(0) - 'a';
+        int row = pos.charAt(1) - '1';
+        return (row + col) % 2 == 0 ? LIGHT_SQUARE_COLOR : DARK_SQUARE_COLOR;
     }
 }
 

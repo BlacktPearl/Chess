@@ -96,7 +96,7 @@ public class User {
         return ID;
     }
 
-    public boolean verifyPasswordHash(String password, String storedHash) {
+    public static boolean verifyPasswordHash(String password, String storedHash) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hashedPassword = md.digest(password.getBytes());
@@ -125,7 +125,7 @@ public class User {
         }
     }
 
-    private static String hashPassword(String password) {
+    public static String hashPassword(String password) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hashedPassword = md.digest(password.getBytes());
