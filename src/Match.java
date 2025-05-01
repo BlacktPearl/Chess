@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.Timer;
 
 public class Match {
     private int matchID;
@@ -10,6 +11,8 @@ public class Match {
     private String status;
     private List<Move> moveHistory = new ArrayList<>();
     private boolean isWhiteTurn = true;
+    private Timer whiteTimer;
+    private Timer blackTimer;
 
     private long whiteTimeLeft; // in milliseconds
     private long blackTimeLeft;
@@ -30,7 +33,10 @@ public class Match {
 
     public void startMatch() {
         this.status = "Ongoing";
-        lastMoveTimestamp = System.currentTimeMillis();
+        whiteTimer = new Timer(1000, e -> toggleTurn());
+        blackTimer = new Timer(1000, e -> toggleTurn());
+        whiteTimer.start();
+        lastMoveTimestamp = System.currentTimeMillis() + 1000; // Start with 1 second subtracted for accuracy
     }
 
     public Player getCurrentPlayer() {
@@ -39,15 +45,17 @@ public class Match {
 
     public void toggleTurn() {
         long now = System.currentTimeMillis();
-        long duration = now - lastMoveTimestamp;
+        long duration = now - lastMoveTimestamp ; // Subtract 1 second for timer accuracy
 
         if (isWhiteTurn) {
+            blackTimer.stop();
             whiteTimeLeft -= duration;
+            whiteTimer.start();
         } else {
+            whiteTimer.stop();
             blackTimeLeft -= duration;
+            blackTimer.start();
         }
-
-        isWhiteTurn = !isWhiteTurn;
         lastMoveTimestamp = now;
 
         checkForTimeout();
@@ -55,16 +63,22 @@ public class Match {
 
     private void checkForTimeout() {
         if (whiteTimeLeft <= 0) {
-            winner = player2;
             status = "Completed (White timed out)";
+            whiteTimer.stop();
+            blackTimer.stop();
         } else if (blackTimeLeft <= 0) {
-            winner = player1;
             status = "Completed (Black timed out)";
+            whiteTimer.stop();
+            blackTimer.stop();
         }
     }
 
     public void recordMove(Move move) {
         moveHistory.add(move);
+        if (moveHistory.size() == 1) {
+            whiteTimer.start(); // Start white's timer on the first move
+        }
+        isWhiteTurn = !isWhiteTurn;
     }
 
     public List<Move> getMoveHistory() {
