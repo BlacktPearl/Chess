@@ -57,7 +57,8 @@ public class ChessBoard {
             case "B": return Math.abs(dx) == Math.abs(dy);
             case "Q": return dx == 0 || dy == 0 || Math.abs(dx) == Math.abs(dy);
             case "K": return Math.abs(dx) <= 1 && Math.abs(dy) <= 1;
-            default: return false;
+            default:
+                return false;
         }
     }
 

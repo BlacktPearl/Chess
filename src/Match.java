@@ -7,6 +7,7 @@ public class Match {
     private Player player1;
     private Player player2;
     private Player winner;
+    private Player loser;
     private String timeControl;
     private String status;
     private List<Move> moveHistory = new ArrayList<>();
@@ -78,7 +79,9 @@ public class Match {
         if (moveHistory.size() == 1) {
             whiteTimer.start(); // Start white's timer on the first move
         }
-        isWhiteTurn = !isWhiteTurn;
+        if (move.isLegal()){
+            isWhiteTurn = !isWhiteTurn;
+        }
     }
 
     public List<Move> getMoveHistory() {
@@ -100,6 +103,14 @@ public class Match {
     public void setWinner(Player winner) {
         this.winner = winner;
         this.status = "Completed";
+        winner.changePlayerStats(1,0, 0,20);
+
+    }
+
+    public void setLoser(Player loser){
+        this.loser = loser;
+        this.status = "Completed";
+        loser.changePlayerStats(0,1, 0,-10);
     }
 
     public String getStatus() {

@@ -1,3 +1,4 @@
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicScrollBarUI;
@@ -8,6 +9,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+
 
 public class LoginGUI extends JFrame {
     private JTextField usernameField;
@@ -85,7 +87,9 @@ public class LoginGUI extends JFrame {
                 "Error initializing user database: " + e.getMessage(),
                 "Error", JOptionPane.ERROR_MESSAGE);
         }
-        
+
+
+    // Set default close operation}
         // Apply modern look and feel
         applyModernLookAndFeel();
     }
@@ -700,6 +704,7 @@ public class LoginGUI extends JFrame {
                 // Launch main dashboard and close login screen
                 this.dispose();
                 SwingUtilities.invokeLater(() -> new DashboardGUI(user));
+
             } else {
                 JOptionPane.showMessageDialog(this, 
                     "Invalid username or password",
@@ -809,6 +814,16 @@ public class LoginGUI extends JFrame {
                 writer.write(username + "," + passwordHash + "," + role + "," + name + "," + country + "," + nextId);
                 writer.newLine();
             }
+
+            File statsFile = new File("playerStats.txt");
+            try (FileWriter fw = new FileWriter(statsFile, true);
+                 BufferedWriter writer = new BufferedWriter(fw)) {
+                writer.write(username + ", 0, 0, 0, 1200");
+                writer.newLine();
+            }
+
+
+
             
             JOptionPane.showMessageDialog(this, 
                 "Registration successful!",
