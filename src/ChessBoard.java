@@ -58,7 +58,10 @@ public class ChessBoard {
     private boolean isLegalMoveWithRules(String from, String to, String piece, boolean whiteTurn) {
         String movingPiece = board.get(from);
         if (movingPiece == null || !movingPiece.endsWith(piece.substring(0, 1))) return false;
-        if ((whiteTurn && !movingPiece.startsWith("w")) || (!whiteTurn && !movingPiece.startsWith("b"))) return false;
+        
+        // Check if the piece belongs to the player whose turn it is
+        boolean isWhitePiece = movingPiece.startsWith("w");
+        if (whiteTurn != isWhitePiece) return false;
 
         String target = board.get(to);
         if (target != null && target.charAt(0) == movingPiece.charAt(0)) return false;

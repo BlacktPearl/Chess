@@ -93,6 +93,9 @@ public class MatchGUI extends JFrame {
         // Start the clock timer
         startClockTimer();
         
+        // Initialize turn display with proper state
+        SwingUtilities.invokeLater(() -> boardPanel.updateTitle());
+        
         // Add window listener to clean up resources
         addWindowListener(new WindowAdapter() {
             @Override
@@ -526,6 +529,12 @@ public class MatchGUI extends JFrame {
         private Map<String, String> piecePositions = new HashMap<>();
         private static final int BOARD_SIZE = 480; // Adjust as needed for your UI
         private int squareSize;
+        
+        // Define square colors
+        private static final Color LIGHT_SQUARE_COLOR = new Color(238, 216, 181);
+        private static final Color DARK_SQUARE_COLOR = new Color(181, 136, 99);
+        private static final Color HIGHLIGHT_COLOR = new Color(0, 255, 0, 128);
+        private static final Color SELECTION_COLOR = new Color(0, 255, 0);
 
         public ChessBoardPanel() {
             squareSize = BOARD_SIZE / 8;
@@ -544,8 +553,7 @@ public class MatchGUI extends JFrame {
                     square.setOpaque(true);
                     
                     // Use the standard chess board colors
-                    Color squareColor = (row + col) % 2 == 0 ? 
-                        ChessBoard.LIGHT_SQUARE_COLOR : ChessBoard.DARK_SQUARE_COLOR;
+                    Color squareColor = (row + col) % 2 == 0 ? LIGHT_SQUARE_COLOR : DARK_SQUARE_COLOR;
                     square.setBackground(squareColor);
                     
                     // Add rank and file labels with better styling
@@ -609,9 +617,26 @@ public class MatchGUI extends JFrame {
         }
 
         private void setPiece(int col, int row, String piece) {
-            String symbol = ChessBoard.getUnicodeSymbol(piece);
+            String symbol = getUnicodeSymbol(piece);
             squares[row][col].setText(symbol);
             piecePositions.put(posKey(col, row), piece);
+        }
+
+        private String getUnicodeSymbol(String pieceCode) {
+            if (pieceCode == null || pieceCode.length() < 2) return "";
+            
+            char color = pieceCode.charAt(0);
+            char piece = pieceCode.charAt(1);
+            
+            switch (piece) {
+                case 'K': return color == 'w' ? "♔" : "♚";
+                case 'Q': return color == 'w' ? "♕" : "♛";
+                case 'R': return color == 'w' ? "♖" : "♜";
+                case 'B': return color == 'w' ? "♗" : "♝";
+                case 'N': return color == 'w' ? "♘" : "♞";
+                case 'P': return color == 'w' ? "♙" : "♟";
+                default: return "";
+            }
         }
 
         private void handleClick(int row, int col, JLabel square) {
@@ -629,8 +654,8 @@ public class MatchGUI extends JFrame {
                     
                     if (isWhitePiece == isWhiteTurn) {
                         selectedPosition = position;
-                selectedSquare = square;
-                        square.setBorder(BorderFactory.createLineBorder(new Color(0, 255, 0), 3));
+                        selectedSquare = square;
+                        square.setBorder(BorderFactory.createLineBorder(SELECTION_COLOR, 3));
                     }
                 }
             } else {
@@ -641,54 +666,54 @@ public class MatchGUI extends JFrame {
                 String pieceCode = piecePositions.get(fromPosition);
                 
                 // Reset the selection
-                selectedSquare.setBorder(null);
-                    selectedPosition = null;
-                    selectedSquare = null;
+                selectedSquare.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+                selectedPosition = null;
+                selectedSquare = null;
                 
                 // Perform the move if valid
                 if (pieceCode != null) {
-                    // Check if valid move
-                    if (isValidMove(fromPosition, toPosition, pieceCode)) {
-                        // Update the board
-                        updateBoard(fromPosition, toPosition, pieceCode);
-                        moveHistoryArea.append(pieceCode + ": " + fromPosition + " -> " + toPosition + "\n");
-                        
-                        // Update match state
-                    match.toggleTurn();
-                        
-                        // Update the title to show whose turn it is
-                        updateTitle();
+                    // Check if trying to select another piece of the same color
+                    String targetPieceCode = piecePositions.get(toPosition);
+                    if (targetPieceCode != null && targetPieceCode.charAt(0) == pieceCode.charAt(0)) {
+                        // If selecting another piece of same color, just change selection
+                        if (pieceCode.charAt(0) == (match.isWhiteTurn() ? 'w' : 'b')) {
+                            selectedPosition = toPosition;
+                            selectedSquare = squares[row][col];
+                            selectedSquare.setBorder(BorderFactory.createLineBorder(SELECTION_COLOR, 3));
+                        }
+                        return;
+                    }
+                    
+                    // Validate move according to chess rules
+                    boolean isLegalMove = Referee.isLegalMove(fromPosition, toPosition, pieceCode, piecePositions);
+                    
+                    if (!isLegalMove) {
+                        // Illegal move, don't allow it
+                        JOptionPane.showMessageDialog(MatchGUI.this, 
+                            "Illegal move! Please try again.",
+                            "Invalid Move", 
+                            JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    
+                    // Update the board
+                    updateBoard(fromPosition, toPosition, pieceCode);
+                    moveHistoryArea.append(pieceCode + ": " + fromPosition + " -> " + toPosition + "\n");
+                    
+                    // Create a Move object to record in match history
+                    SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
+                    String timestamp = formatter.format(new Date());
+                    Player currentPlayer = match.getCurrentPlayer();
+                    Move move = new Move(fromPosition, toPosition, pieceCode, timestamp, true, currentPlayer);
+                    match.recordMove(move);
+                    
+                    // Update the title to show whose turn it is
+                    updateTitle();
                     
                     // Check for game end conditions
-                        checkGameState();
-                    }
+                    checkGameState();
                 }
             }
-        }
-
-        private boolean isValidMove(String fromPosition, String toPosition, String pieceCode) {
-            // Convert move to UCI format for Stockfish validation
-            String uciMove = fromPosition + toPosition;
-            
-            // Check if the move is valid using Stockfish
-            if (stockfishEngine != null) {
-                String fen = StockfishEngine.boardToFen(piecePositions, match.isWhiteTurn());
-                return stockfishEngine.isValidMove(fen, uciMove);
-            }
-            
-            // If no Stockfish, use a simple validation
-            // Don't allow moving to a square with your own piece
-            String destPiece = piecePositions.get(toPosition);
-            if (destPiece != null) {
-                boolean isWhiteSource = pieceCode.startsWith("w");
-                boolean isWhiteDest = destPiece.startsWith("w");
-                if (isWhiteSource == isWhiteDest) {
-                    return false; // Can't capture your own pieces
-                }
-            }
-            
-            // Basic move validation for each piece type
-            return true; // Simplified for this fix
         }
 
         private void updateTitle() {
@@ -734,14 +759,16 @@ public class MatchGUI extends JFrame {
             
             // Move the piece
             squares[fromRow][fromCol].setText("");
-            squares[toRow][toCol].setText(ChessBoard.getUnicodeSymbol(pieceCode));
+            squares[toRow][toCol].setText(getUnicodeSymbol(pieceCode));
             
             // Update the piecePositions map
             piecePositions.remove(from);
             piecePositions.put(to, pieceCode);
             
-            // Play a sound for the move (if in real app)
-            // playSound(capturedPiece != null ? "capture.wav" : "move.wav");
+            // Add capture information to the move history if applicable
+            if (capturedPiece != null) {
+                moveHistoryArea.append("Captured: " + getUnicodeSymbol(capturedPiece) + "\n");
+            }
         }
         
         private String handlePawnPromotion(String pieceCode) {
@@ -761,7 +788,7 @@ public class MatchGUI extends JFrame {
             
             for (int i = 0; i < pieces.length; i++) {
                 final String piece = pieces[i];
-                buttons[i] = new JButton(ChessBoard.getUnicodeSymbol(color + piece));
+                buttons[i] = new JButton(getUnicodeSymbol(color + piece));
                 buttons[i].setFont(new Font("DejaVu Sans", Font.PLAIN, 36));
                 buttons[i].setToolTipText(pieceNames[i]);
                 buttons[i].setFocusPainted(false);

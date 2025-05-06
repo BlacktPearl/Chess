@@ -46,7 +46,7 @@ public class Match {
 
     public void toggleTurn() {
         long now = System.currentTimeMillis();
-        long duration = now - lastMoveTimestamp ; // Subtract 1 second for timer accuracy
+        long duration = now - lastMoveTimestamp;
 
         if (isWhiteTurn) {
             blackTimer.stop();
@@ -79,8 +79,9 @@ public class Match {
         if (moveHistory.size() == 1) {
             whiteTimer.start(); // Start white's timer on the first move
         }
-        if (move.isLegal()){
+        if (move.isLegal()) {
             isWhiteTurn = !isWhiteTurn;
+            lastMoveTimestamp = System.currentTimeMillis();
         }
     }
 

@@ -5,13 +5,8 @@ rm -rf build
 mkdir -p build
 
 # Check if Stockfish is available
-if [ ! -d "resources/stockfish" ]; then
-    echo "Warning: Stockfish directory not found. Some features may be unavailable."
-    echo "Consider running ./download_stockfish.sh to install Stockfish."
-    
-    # Create the directory structure for stockfish
-    mkdir -p resources/stockfish
-fi
+echo "Consider running ./download_stockfish.sh to install Stockfish."
+
 
 # Compile all Java files from src directory
 echo "Compiling Java source files..."
