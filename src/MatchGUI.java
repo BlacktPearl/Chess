@@ -26,6 +26,7 @@ public class MatchGUI extends JFrame {
     private JButton hintButton;
     private JTextArea analysisTextArea;
     private StockfishEngine stockfishEngine;
+    private String lastPawnDoubleMove = null; // Track last pawn that moved 2 squares for en passant
     
     private static final Color BACKGROUND_COLOR = new Color(240, 240, 245);
     private static final Color HEADER_COLOR = new Color(50, 50, 75);
@@ -687,11 +688,57 @@ public class MatchGUI extends JFrame {
                     // Validate move according to chess rules
                     boolean isLegalMove = Referee.isLegalMove(fromPosition, toPosition, pieceCode, piecePositions);
                     
+                    // Special check for en passant
+                    if (!isLegalMove && pieceCode.endsWith("P")) {
+                        int fromCol = fromPosition.charAt(0) - 'a';
+                        int fromRow = fromPosition.charAt(1) - '1';
+                        int toCol = toPosition.charAt(0) - 'a';
+                        int toRow = toPosition.charAt(1) - '1';
+                        
+                        boolean isWhitePawn = pieceCode.startsWith("w");
+                        boolean isDiagonalMove = Math.abs(fromCol - toCol) == 1;
+                        boolean isCorrectDirection = (isWhitePawn && toRow - fromRow == 1) || (!isWhitePawn && fromRow - toRow == 1);
+                        
+                        if (isDiagonalMove && isCorrectDirection) {
+                            // Check for en passant
+                            String capturePos = "" + (char)(toCol + 'a') + (char)(fromRow + '1');
+                            if (lastPawnDoubleMove != null && lastPawnDoubleMove.equals(capturePos)) {
+                                isLegalMove = true;
+                            }
+                        }
+                    }
+                    
                     if (!isLegalMove) {
                         // Illegal move, don't allow it
                         JOptionPane.showMessageDialog(MatchGUI.this, 
                             "Illegal move! Please try again.",
                             "Invalid Move", 
+                            JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    
+                    // Check if player is in check
+                    boolean isWhiteTurn = match.isWhiteTurn();
+                    
+                    // Store current board state to check if move resolves check
+                    Map<String, String> boardBackup = new HashMap<>(piecePositions);
+                    
+                    // Make the move temporarily
+                    piecePositions.remove(fromPosition);
+                    String capturedPiece = piecePositions.get(toPosition);
+                    piecePositions.put(toPosition, pieceCode);
+                    
+                    // Check if player is still in check after move
+                    boolean stillInCheck = isCheck(isWhiteTurn);
+                    
+                    // Restore board state
+                    piecePositions.clear();
+                    piecePositions.putAll(boardBackup);
+                    
+                    if (stillInCheck) {
+                        JOptionPane.showMessageDialog(MatchGUI.this, 
+                            "Illegal move! You must get out of check first.",
+                            "Check", 
                             JOptionPane.WARNING_MESSAGE);
                         return;
                     }
@@ -745,8 +792,30 @@ public class MatchGUI extends JFrame {
             int toCol = to.charAt(0) - 'a';
             int toRow = to.charAt(1) - '1';
             
+            // Check if this is a pawn double move (for en passant)
+            if (pieceCode.endsWith("P") && Math.abs(toRow - fromRow) == 2) {
+                lastPawnDoubleMove = "" + (char)(toCol + 'a') + (char)((fromRow + toRow) / 2 + '1');
+            } else {
+                lastPawnDoubleMove = null;
+            }
+            
             // Check for captures
             String capturedPiece = piecePositions.get(to);
+            
+            // Check for en passant capture
+            if (pieceCode.endsWith("P") && fromCol != toCol && capturedPiece == null) {
+                // This is a diagonal pawn move with no capture at destination - must be en passant
+                int capturedRow = fromRow; // The captured pawn is on the same rank as the capturing pawn
+                String enPassantPos = "" + (char)(toCol + 'a') + (char)(capturedRow + '1');
+                capturedPiece = piecePositions.get(enPassantPos);
+                
+                if (capturedPiece != null && capturedPiece.endsWith("P")) {
+                    // Remove the captured pawn
+                    piecePositions.remove(enPassantPos);
+                    squares[capturedRow][toCol].setText("");
+                    moveHistoryArea.append("En passant capture: " + capturedPiece + " at " + enPassantPos + "\n");
+                }
+            }
             
             // Check for pawn promotion
             if (pieceCode.endsWith("P")) {
@@ -766,7 +835,7 @@ public class MatchGUI extends JFrame {
             piecePositions.put(to, pieceCode);
             
             // Add capture information to the move history if applicable
-            if (capturedPiece != null) {
+            if (capturedPiece != null && !moveHistoryArea.getText().contains("En passant capture")) {
                 moveHistoryArea.append("Captured: " + getUnicodeSymbol(capturedPiece) + "\n");
             }
         }

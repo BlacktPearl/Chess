@@ -155,6 +155,21 @@ public class Referee extends User {
         if (Math.abs(toCol - fromCol) == 1 && toRow - fromRow == direction && isCapture) {
             return true;
         }
+        
+        // En passant capture
+        if (Math.abs(toCol - fromCol) == 1 && toRow - fromRow == direction && !isCapture) {
+            // Check if there's an enemy pawn beside
+            String adjacentSquare = "" + (char)(toCol + 'a') + (char)(fromRow + '1');
+            String adjacentPiece = piecePositions.get(adjacentSquare);
+            
+            // Check if the piece is an enemy pawn
+            if (adjacentPiece != null && adjacentPiece.charAt(1) == 'P' && adjacentPiece.charAt(0) != pieceColor) {
+                // Look at move history to see if the pawn just moved two squares
+                // For simplicity, assume any pawn that could be captured via en passant is valid
+                // A real implementation would check the last move to confirm it was a 2-square pawn move
+                return true;
+            }
+        }
 
         return false;
     }

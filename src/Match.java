@@ -89,6 +89,13 @@ public class Match {
         return moveHistory;
     }
 
+    public Move getLastMove() {
+        if (moveHistory.isEmpty()) {
+            return null;
+        }
+        return moveHistory.get(moveHistory.size() - 1);
+    }
+
     public Player getPlayer1() {
         return player1;
     }
