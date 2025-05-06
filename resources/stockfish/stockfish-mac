@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Simple mock Stockfish engine that outputs predefined responses
+# This simulates a minimal version of the engine for testing
+
+if [[ "$1" == "--version" ]]; then
+  echo "Stockfish 16 (mock)"
+  exit 0
+fi
+
+# Output the initial UCI response
+echo "Stockfish 16 (mock) by Mock Author"
+echo "id name Stockfish 16 (mock)"
+echo "id author Mock Author"
+echo "option name Threads type spin default 1 min 1 max 512"
+echo "option name Hash type spin default 16 min 1 max 33554432"
+echo "uciok"
+
+# Read from stdin and provide mock responses
+while read -r line; do
+  if [[ "$line" == "isready" ]]; then
+    echo "readyok"
+  elif [[ "$line" == "quit" ]]; then
+    exit 0
+  elif [[ "$line" == "go"* ]]; then
+    # Simulate thinking
+    sleep 0.5
+    echo "info depth 1 score cp 20 time 10 nodes 10 nps 1 pv e2e4"
+    echo "info depth 2 score cp 30 time 20 nodes 100 nps 5 pv e2e4 e7e5"
+    echo "bestmove e2e4 ponder e7e5"
+  elif [[ "$line" == "ucinewgame" ]]; then
+    echo "info string Starting new game"
+  fi
+done

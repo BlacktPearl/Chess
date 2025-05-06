@@ -1,5 +1,6 @@
 import javax.swing.*;
 import java.io.File;
+import java.awt.*;
 
 public class Main {
     public static void main(String[] args) {
@@ -12,6 +13,14 @@ public class Main {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        
+        // Initialize Stockfish
+        StockfishManager stockfishManager = StockfishManager.getInstance();
+        
+        // Register a shutdown hook to clean up resources
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            stockfishManager.shutdown();
+        }));
         
         // Launch application with login screen
         SwingUtilities.invokeLater(() -> new LoginGUI().setVisible(true));

@@ -4,6 +4,8 @@ import java.awt.Color;
 
 public class ChessBoard {
     private Map<String, String> board;
+    private StockfishEngine stockfishEngine;
+    private boolean useStockfish;
     
     // Color definitions for UI representation
     public static final Color LIGHT_SQUARE_COLOR = new Color(240, 217, 181);
@@ -12,6 +14,20 @@ public class ChessBoard {
     
     public ChessBoard() {
         initializeBoard();
+        initializeStockfish();
+    }
+
+    /**
+     * Initialize the Stockfish engine if available
+     */
+    private void initializeStockfish() {
+        StockfishManager manager = StockfishManager.getInstance();
+        if (manager.isStockfishAvailable()) {
+            stockfishEngine = manager.getEngine("board");
+            useStockfish = stockfishEngine != null && stockfishEngine.isReady();
+        } else {
+            useStockfish = false;
+        }
     }
 
     public void initializeBoard() {
@@ -25,7 +41,21 @@ public class ChessBoard {
         }
     }
 
+    /**
+     * Check if a move is legal using either internal rules or Stockfish
+     */
     public boolean isLegalMove(String from, String to, String piece, boolean whiteTurn) {
+        if (useStockfish) {
+            return isLegalMoveWithStockfish(from, to, whiteTurn);
+        } else {
+            return isLegalMoveWithRules(from, to, piece, whiteTurn);
+        }
+    }
+    
+    /**
+     * Check if a move is legal using simple chess rules
+     */
+    private boolean isLegalMoveWithRules(String from, String to, String piece, boolean whiteTurn) {
         String movingPiece = board.get(from);
         if (movingPiece == null || !movingPiece.endsWith(piece.substring(0, 1))) return false;
         if ((whiteTurn && !movingPiece.startsWith("w")) || (!whiteTurn && !movingPiece.startsWith("b"))) return false;
@@ -61,6 +91,42 @@ public class ChessBoard {
                 return false;
         }
     }
+    
+    /**
+     * Check if a move is legal using Stockfish
+     */
+    private boolean isLegalMoveWithStockfish(String from, String to, boolean whiteTurn) {
+        String uciMove = from + to;
+        String fen = boardToFen(whiteTurn);
+        return stockfishEngine.isValidMove(fen, uciMove);
+    }
+
+    /**
+     * Convert the current board to FEN notation
+     */
+    public String boardToFen(boolean isWhiteTurn) {
+        return StockfishEngine.boardToFen(board, isWhiteTurn);
+    }
+
+    /**
+     * Get move suggestions from Stockfish
+     */
+    public String getBestMove(boolean whiteTurn, int thinkTimeMs) {
+        if (!useStockfish) return null;
+        
+        String fen = boardToFen(whiteTurn);
+        return stockfishEngine.getBestMove(fen, thinkTimeMs);
+    }
+    
+    /**
+     * Analyze the current position with Stockfish
+     */
+    public Map<String, Object> analyzePosition(boolean whiteTurn, int depth) {
+        if (!useStockfish) return null;
+        
+        String fen = boardToFen(whiteTurn);
+        return stockfishEngine.analyzePosition(fen, depth);
+    }
 
     public void performMove(String from, String to) {
         String piece = board.remove(from);
@@ -73,6 +139,14 @@ public class ChessBoard {
 
     public Map<String, String> getBoard() {
         return new HashMap<>(board);
+    }
+    
+    /**
+     * Set the board from a Map representation
+     */
+    public void setBoard(Map<String, String> newBoard) {
+        board.clear();
+        board.putAll(newBoard);
     }
     
     // Gets Unicode symbol for chess piece
@@ -103,6 +177,16 @@ public class ChessBoard {
     
     // Check if a position is in check
     public boolean isInCheck(boolean isWhite) {
+        if (useStockfish) {
+            // Use Stockfish to determine check
+            String fen = boardToFen(isWhite);
+            Map<String, Object> analysis = stockfishEngine.analyzePosition(fen, 1);
+            if (analysis != null && analysis.containsKey("inCheck")) {
+                return (boolean) analysis.get("inCheck");
+            }
+        }
+        
+        // Fallback to internal check detection
         // Find the king position
         String kingCode = isWhite ? "wK" : "bK";
         String kingPos = null;
@@ -124,7 +208,7 @@ public class ChessBoard {
             // If it's an opponent's piece
             if (pieceCode.charAt(0) != (isWhite ? 'w' : 'b')) {
                 // Check if it can attack the king
-                if (isLegalMove(piecePos, kingPos, pieceCode.substring(1), !isWhite)) {
+                if (isLegalMoveWithRules(piecePos, kingPos, pieceCode.substring(1), !isWhite)) {
                     return true;
                 }
             }
@@ -138,6 +222,23 @@ public class ChessBoard {
         int col = pos.charAt(0) - 'a';
         int row = pos.charAt(1) - '1';
         return (row + col) % 2 == 0 ? LIGHT_SQUARE_COLOR : DARK_SQUARE_COLOR;
+    }
+    
+    /**
+     * Check if Stockfish is being used
+     */
+    public boolean isUsingStockfish() {
+        return useStockfish;
+    }
+    
+    /**
+     * Clean up resources when done with the board
+     */
+    public void cleanup() {
+        if (useStockfish) {
+            StockfishManager.getInstance().closeEngine("board");
+            useStockfish = false;
+        }
     }
 }
 

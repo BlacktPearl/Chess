@@ -1,10 +1,12 @@
 import javax.swing.*;
 import javax.swing.border.*;
+import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.geom.Rectangle2D;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class TrainingBoardGUI extends JFrame {
@@ -35,6 +37,10 @@ public class TrainingBoardGUI extends JFrame {
     private String selectedPiece = null;
     private int selectedRow = -1;
     private int selectedCol = -1;
+    
+    private StockfishEngine stockfishEngine;
+    private JTextArea analysisTextArea;
+    private static boolean stockfishWarningShown = false;
 
     public TrainingBoardGUI() {
         setTitle("Chess Training Board - 2025 Edition");
@@ -42,6 +48,9 @@ public class TrainingBoardGUI extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setBackground(BACKGROUND_COLOR);
+        
+        // Initialize Stockfish engine
+        initializeStockfish();
         
         // Use border layout for the main frame
         setLayout(new BorderLayout(15, 15));
@@ -75,6 +84,16 @@ public class TrainingBoardGUI extends JFrame {
         
         // Initialize the board with pieces
         setupPieces();
+        
+        // Add window listener to clean up resources
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (stockfishEngine != null) {
+                    StockfishManager.getInstance().closeEngine("training");
+                }
+            }
+        });
     }
     
     private JPanel createHeaderPanel() {
@@ -353,9 +372,44 @@ public class TrainingBoardGUI extends JFrame {
         notesPanel.add(scrollPane);
         notesPanel.add(saveNotesButton);
         
-        // Add tabs
-        tabbedPane.addTab("Pieces", piecesPanel);
-        tabbedPane.addTab("Notes", notesPanel);
+        // Add analysis textarea to one of the tabs
+        JPanel analysisPanel = new JPanel();
+        analysisPanel.setLayout(new BorderLayout(0, 10));
+        analysisPanel.setBackground(PANEL_COLOR);
+        analysisPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        
+        JLabel analysisTitle = createSectionTitle("Engine Analysis");
+        analysisPanel.add(analysisTitle, BorderLayout.NORTH);
+        
+        analysisTextArea = new JTextArea(10, 20);
+        analysisTextArea.setEditable(false);
+        analysisTextArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        analysisTextArea.setForeground(TEXT_COLOR);
+        analysisTextArea.setBackground(PANEL_COLOR.darker());
+        analysisTextArea.setBorder(new EmptyBorder(5, 5, 5, 5));
+        analysisTextArea.setLineWrap(true);
+        analysisTextArea.setWrapStyleWord(true);
+        
+        JScrollPane analysisScrollPane = new JScrollPane(analysisTextArea);
+        analysisScrollPane.setBorder(new LineBorder(PRIMARY_COLOR, 1));
+        analysisScrollPane.getVerticalScrollBar().setForeground(PRIMARY_COLOR);
+        analysisScrollPane.getVerticalScrollBar().setBackground(PANEL_COLOR.darker());
+        
+        analysisPanel.add(analysisScrollPane, BorderLayout.CENTER);
+        
+        JPanel analysisButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        analysisButtonPanel.setOpaque(false);
+        
+        JButton analyzeButton = createButton("Analyze Position", e -> analyzeCurrentPosition());
+        JButton hintButton = createButton("Get Hint", e -> getHint());
+        
+        analysisButtonPanel.add(analyzeButton);
+        analysisButtonPanel.add(hintButton);
+        
+        analysisPanel.add(analysisButtonPanel, BorderLayout.SOUTH);
+        
+        // Add to the tabbed pane
+        tabbedPane.addTab("Analysis", null, analysisPanel, "Analyze the current position");
         
         // Add all sections to the control panel
         controlPanel.add(controlsTitle);
@@ -363,6 +417,10 @@ public class TrainingBoardGUI extends JFrame {
         controlPanel.add(buttonPanel);
         controlPanel.add(Box.createRigidArea(new Dimension(0, 20)));
         controlPanel.add(tabbedPane);
+        
+        // Add tabs
+        tabbedPane.addTab("Pieces", piecesPanel);
+        tabbedPane.addTab("Notes", notesPanel);
     }
 
     private JLabel createSectionTitle(String text) {
@@ -665,13 +723,192 @@ public class TrainingBoardGUI extends JFrame {
     }
     
     private void analyzeCurrentPosition() {
-        // This would typically send the position to a chess engine for analysis
-        statusLabel.setText("Analysis feature would be connected to a chess engine in a full implementation.");
+        if (stockfishEngine == null) {
+            displayStockfishError();
+            return;
+        }
+        
+        // Convert the current board position to FEN
+        String fen = StockfishEngine.boardToFen(piecePositions, true); // Assuming white to move
+        
+        statusLabel.setText("Analyzing position...");
+        analysisTextArea.setText("Analyzing...");
+        
+        // Run analysis in a separate thread to avoid freezing the UI
+        new Thread(() -> {
+            Map<String, Object> analysis = stockfishEngine.analyzePosition(fen, 15);
+            
+            if (analysis != null) {
+                // Format the analysis results
+                StringBuilder result = new StringBuilder();
+                
+                if (analysis.containsKey("score")) {
+                    double score = (double) analysis.get("score");
+                    result.append(String.format("Evaluation: %+.2f\n", score));
+                }
+                
+                if (analysis.containsKey("mateIn")) {
+                    int mateIn = (int) analysis.get("mateIn");
+                    result.append("Mate in ").append(Math.abs(mateIn)).append(" for ");
+                    result.append(mateIn > 0 ? "white" : "black").append("\n");
+                }
+                
+                result.append("\nBest move: ");
+                if (analysis.containsKey("bestMove")) {
+                    String bestMove = (String) analysis.get("bestMove");
+                    result.append(formatMove(bestMove)).append("\n");
+                }
+                
+                result.append("\nTop lines:\n");
+                List<String> pvMoves = (List<String>) analysis.getOrDefault("pvMoves", List.of());
+                for (int i = 0; i < pvMoves.size(); i++) {
+                    result.append(i + 1).append(". ").append(formatMoves(pvMoves.get(i))).append("\n");
+                }
+                
+                // Update UI on the EDT
+                SwingUtilities.invokeLater(() -> {
+                    analysisTextArea.setText(result.toString());
+                    statusLabel.setText("Analysis complete.");
+                });
+            } else {
+                SwingUtilities.invokeLater(() -> {
+                    analysisTextArea.setText("Analysis failed.");
+                    statusLabel.setText("Analysis failed.");
+                });
+            }
+        }).start();
+    }
+    
+    private void getHint() {
+        if (stockfishEngine == null) {
+            displayStockfishError();
+            return;
+        }
+        
+        String fen = StockfishEngine.boardToFen(piecePositions, true); // Assuming white to move
+        
+        statusLabel.setText("Getting hint...");
+        
+        new Thread(() -> {
+            String hint = stockfishEngine.getHint(fen);
+            
+            if (hint != null) {
+                SwingUtilities.invokeLater(() -> {
+                    statusLabel.setText("Hint: " + formatMove(hint));
+                    
+                    // Highlight the hint move on the board
+                    highlightMove(hint);
+                });
+            } else {
+                SwingUtilities.invokeLater(() -> {
+                    statusLabel.setText("Could not get a hint.");
+                });
+            }
+        }).start();
+    }
+    
+    private void highlightMove(String uciMove) {
+        if (uciMove.length() < 4) return;
+        
+        // Extract source and destination coordinates
+        int fromFile = uciMove.charAt(0) - 'a';
+        int fromRank = uciMove.charAt(1) - '1';
+        int toFile = uciMove.charAt(2) - 'a';
+        int toRank = uciMove.charAt(3) - '1';
+        
+        // Highlight source square
+        squares[fromRank][fromFile].setBackground(HIGHLIGHT_COLOR);
+        
+        // Highlight destination square
+        squares[toRank][toFile].setBackground(MOVE_INDICATOR);
+        
+        // Schedule removal of highlights
+        Timer timer = new Timer(2000, e -> {
+            squares[fromRank][fromFile].setBackground((fromRank + fromFile) % 2 == 0 ? LIGHT_SQUARE : DARK_SQUARE);
+            squares[toRank][toFile].setBackground((toRank + toFile) % 2 == 0 ? LIGHT_SQUARE : DARK_SQUARE);
+        });
+        timer.setRepeats(false);
+        timer.start();
+    }
+    
+    private String formatMove(String uciMove) {
+        if (uciMove == null || uciMove.length() < 4) return "Invalid move";
+        
+        char fromFile = uciMove.charAt(0);
+        char fromRank = uciMove.charAt(1);
+        char toFile = uciMove.charAt(2);
+        char toRank = uciMove.charAt(3);
+        
+        String promotion = "";
+        if (uciMove.length() > 4) {
+            char promotionPiece = uciMove.charAt(4);
+            switch (promotionPiece) {
+                case 'q': promotion = "=Q"; break;
+                case 'r': promotion = "=R"; break;
+                case 'b': promotion = "=B"; break;
+                case 'n': promotion = "=N"; break;
+            }
+        }
+        
+        return String.format("%c%c-%c%c%s", fromFile, fromRank, toFile, toRank, promotion);
+    }
+    
+    private String formatMoves(String uciMoves) {
+        String[] moves = uciMoves.split("\\s+");
+        StringBuilder formatted = new StringBuilder();
+        
+        for (String move : moves) {
+            formatted.append(formatMove(move)).append(" ");
+        }
+        
+        return formatted.toString().trim();
     }
     
     private void saveCurrentPosition() {
         // This would save the current board position
         statusLabel.setText("Current position saved (demo functionality).");
+    }
+
+    /**
+     * Initialize the Stockfish engine
+     */
+    private void initializeStockfish() {
+        StockfishManager manager = StockfishManager.getInstance();
+        if (manager.isStockfishAvailable()) {
+            stockfishEngine = manager.getEngine("training");
+            if (stockfishEngine == null) {
+                displayStockfishError();
+            }
+        } else {
+            displayStockfishError();
+        }
+    }
+
+    private void displayStockfishError() {
+        // Display warning in the analysis text area
+        if (analysisTextArea != null) {
+            analysisTextArea.setText(
+                "Stockfish engine is not available.\n\n" +
+                "To use analysis features, please download Stockfish from stockfishchess.org\n" +
+                "and place it in the resources/stockfish directory.\n\n" +
+                "For macOS: resources/stockfish/stockfish-mac\n" +
+                "For Windows: resources/stockfish/stockfish.exe\n" +
+                "For Linux: resources/stockfish/stockfish"
+            );
+        }
+        
+        // Show a notification (but only once per session)
+        if (!stockfishWarningShown) {
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Stockfish engine is not available. Please download Stockfish from stockfishchess.org and place it in the resources/stockfish directory.",
+                    "Engine Not Found",
+                    JOptionPane.WARNING_MESSAGE
+                );
+            });
+            stockfishWarningShown = true;
+        }
     }
 
     public static void main(String[] args) {

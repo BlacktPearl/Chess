@@ -607,66 +607,106 @@ public class DashboardGUI extends JFrame {
     }
     
     private void showTournamentDetails(String tournamentName, String location) {
-        JOptionPane.showMessageDialog(this,
-            "Tournament: " + tournamentName + "\n" +
-            "Location: " + location + "\n\n" +
-            "More details will be available in the full implementation.",
-            "Tournament Details",
-            JOptionPane.INFORMATION_MESSAGE);
+        // Find the tournament
+        final Tournament targetTournament = findTournamentByName(tournamentName);
+        
+        if (targetTournament != null) {
+            // For non-admin users, check role before allowing access to tournament details
+            int userRole = currentUser.getRole();
+            if (userRole != 0 && userRole != 2 && !currentUser.getName().toLowerCase().contains("guest")) {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Only players, guests, and administrators can view tournament details.\n\n" +
+                    "You are currently logged in as a " + getRoleString(userRole) + ".",
+                    "Access Restricted",
+                    JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+            
+            // Open the tournament view
+            SwingUtilities.invokeLater(() -> new TournamentGUI(targetTournament, currentUser).setVisible(true));
+        } else {
+            JOptionPane.showMessageDialog(this, "Tournament not found!");
+        }
     }
     
     private void joinTournament(String tournamentName) {
-        int result = JOptionPane.showConfirmDialog(this,
-            "Do you want to join the " + tournamentName + " tournament?",
-            "Join Tournament",
-            JOptionPane.YES_NO_OPTION);
-            
-        if (result == JOptionPane.YES_OPTION) {
-            JOptionPane.showMessageDialog(this,
-                "You have successfully joined the " + tournamentName + " tournament!",
-                "Success",
-                JOptionPane.INFORMATION_MESSAGE);
-                
-            // Find the tournament
-            Tournament selectedTournament = null;
-            for (Tournament tournament : availableTournaments) {
-                if (tournament.getName().equals(tournamentName)) {
-                    selectedTournament = tournament;
-                    break;
+        // Check if the user is a player (role 0) or a guest user
+        boolean isPlayer = currentUser.getRole() == 0 || currentUser.getName().toLowerCase().contains("guest");
+        
+        if (!isPlayer) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Only players can join tournaments.\n\n" +
+                "You are currently logged in as a " + getRoleString(currentUser.getRole()) + ".",
+                "Access Restricted",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+        
+        // Find the tournament - making it effectively final for lambda usage
+        final Tournament targetTournament = findTournamentByName(tournamentName);
+        
+        if (targetTournament != null) {
+            if (currentUser instanceof Player) {
+                boolean joined = targetTournament.addPlayer((Player)currentUser);
+                if (joined) {
+                    JOptionPane.showMessageDialog(this, "Successfully joined tournament: " + tournamentName);
+                    
+                    // Open tournament details
+                    SwingUtilities.invokeLater(() -> new TournamentGUI(targetTournament, currentUser).setVisible(true));
+                } else {
+                    JOptionPane.showMessageDialog(this, "Could not join tournament. It may be full, already started, or you're already registered.");
+                }
+            } else {
+                // Create a temporary Player object for a guest user
+                Player tempPlayer = new Player(currentUser.getName(), 1200, currentUser.getCountry());
+                boolean joined = targetTournament.addPlayer(tempPlayer);
+                if (joined) {
+                    JOptionPane.showMessageDialog(this, "Successfully joined tournament: " + tournamentName);
+                    
+                    // Open tournament details
+                    SwingUtilities.invokeLater(() -> new TournamentGUI(targetTournament, currentUser).setVisible(true));
+                } else {
+                    JOptionPane.showMessageDialog(this, "Could not join tournament. It may be full, already started, or you're already registered.");
                 }
             }
-            
-            if (selectedTournament != null && currentUser instanceof Player) {
-                // Add player to tournament if not already in it
-                Player player = (Player) currentUser;
-                if (!selectedTournament.getPlayers().contains(player)) {
-                    selectedTournament.addPlayer(player);
-                }
-                
-                // Launch the game screen
-                SwingUtilities.invokeLater(() -> {
-                    // Temporary placeholder for actual game screen
-                    JOptionPane.showMessageDialog(this, 
-                        "Starting the game screen for tournament: " + tournamentName + "\n" +
-                        "In a full implementation, this would launch a ChessGameGUI",
-                        "Game Screen", 
-                        JOptionPane.INFORMATION_MESSAGE);
-                    
-                    // Here you would launch the actual game screen
-                    // For example: new ChessGameGUI(selectedTournament, player);
-                });
+        } else {
+            JOptionPane.showMessageDialog(this, "Tournament not found.");
+        }
+    }
+    
+    // Helper method to find a tournament by name
+    private Tournament findTournamentByName(String name) {
+        for (Tournament t : availableTournaments) {
+            if (t.getName().equals(name)) {
+                return t;
             }
         }
+        return null;
     }
     
     /**
      * Opens the training board in a new window
      */
     private void openTrainingBoard() {
-        SwingUtilities.invokeLater(() -> {
-            TrainingBoardGUI trainingBoard = new TrainingBoardGUI();
-            trainingBoard.setVisible(true);
-        });
+        // Check if the user is a player (role 0) or a guest user
+        boolean isPlayer = currentUser.getRole() == 0 || currentUser.getName().toLowerCase().contains("guest");
+        
+        if (!isPlayer) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Only players can access training features.\n\n" +
+                "You are currently logged in as a " + getRoleString(currentUser.getRole()) + ".",
+                "Access Restricted",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+        
+        new TrainingBoardGUI().setVisible(true);
     }
     
     private JPanel createProfilePanel() {
@@ -1010,18 +1050,38 @@ public class DashboardGUI extends JFrame {
     }
     
     private void startNewGame() {
+        // Check if the user is a player (role 0) or a guest user
+        boolean isPlayer = currentUser.getRole() == 0 || currentUser.getName().toLowerCase().contains("guest");
+        
+        if (!isPlayer) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Only players can start games.\n\n" +
+                "You are currently logged in as a " + getRoleString(currentUser.getRole()) + ".",
+                "Access Restricted",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+        
         Player opponent = selectOpponent();
         if (opponent != null && currentUser instanceof Player) {
             Match match = new Match(1, (Player)currentUser, opponent, "10|0");
+            match.startMatch();
+            new MatchGUI(match).setVisible(true);
+        } else if (opponent != null) {
+            // Handle case where currentUser is not a Player instance
+            // Create a temporary Player object based on the current user
+            Player player = new Player(currentUser.getName(), 1200, currentUser.getCountry());
+            Match match = new Match(1, player, opponent, "10|0");
             match.startMatch();
             new MatchGUI(match).setVisible(true);
         }
     }
     
     private Player selectOpponent() {
-        // In a real system, would show list of available players
-        // For now, just create a sample opponent
-        String[] options = {"Random Opponent", "Specific Player", "Cancel"};
+        // Options for opponent selection
+        String[] options = {"Human Opponent", "Specific Player", "Cancel"};
         int choice = JOptionPane.showOptionDialog(
             this, 
             "How would you like to find an opponent?", 
@@ -1034,8 +1094,20 @@ public class DashboardGUI extends JFrame {
         );
         
         if (choice == 0) {
-            // Random opponent with similar rating
-            return new Player("Computer", 1200, "World");
+            // Human opponent - user will play both sides
+            Player opponent = new Player("Opponent", 1200, "Local");
+            
+            JOptionPane.showMessageDialog(
+                this, 
+                "You will be playing against a local human opponent.\n" +
+                "Both players will use the same computer and take turns.\n\n" +
+                "White: " + currentUser.getName() + "\n" +
+                "Black: " + opponent.getName(),
+                "Human Opponent",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+            
+            return opponent;
         } else if (choice == 1) {
             // Specific player - would show user selection dialog
             String name = JOptionPane.showInputDialog(this, "Enter player name:");

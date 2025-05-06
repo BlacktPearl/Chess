@@ -78,6 +78,15 @@ public String getLeaderboard() {
         if (status.equals("in progress") || status.equals("completed")) {
             return false;
         }
+        
+        // Verify the user is a player or guest (role 0 or null)
+        if (player == null) {
+            System.out.println("Cannot add null player to tournament");
+            return false;
+        }
+        
+        // Guests or players with role 0 can join tournaments
+        // We don't strictly check for role 0 to allow guests to participate
         players.add(player);
         return true;
     }

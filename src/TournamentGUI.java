@@ -1,7 +1,8 @@
 import javax.swing.*;
+import javax.swing.table.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.*;
+import java.util.List;
 
 public class TournamentGUI extends JFrame implements ActionListener {
 
@@ -12,11 +13,45 @@ public class TournamentGUI extends JFrame implements ActionListener {
     private User currentUser;
 
     public TournamentGUI(Tournament tournament) {
+        this(tournament, null);
+    }
+    
+    public TournamentGUI(Tournament tournament, User user) {
         this.tournament = tournament;
+        this.currentUser = user;
+        
+        setTitle("Tournament: " + tournament.getName());
+        setSize(800, 600);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(null);
+        
+        // Check if user can participate
+        // Only admins and referees are restricted, players and guests can participate
+        if (user != null && user.getRole() > 0) {
+            // Show warning immediately on construction, before components are initialized
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(this,
+                    "Only players can participate in tournaments. You are currently logged in as a " + 
+                    getRoleString(user.getRole()) + ".\n\n" +
+                    "You can view tournament details but cannot participate.",
+                    "Access Restricted",
+                    JOptionPane.WARNING_MESSAGE);
+            });
+        }
+        
+        initComponents();
+    }
+    
+    private String getRoleString(int role) {
+        switch (role) {
+            case 0: return "Player";
+            case 1: return "Referee";
+            case 2: return "Administrator";
+            default: return "Guest";
+        }
+    }
 
-        setTitle("Chess Tournament");
-        setSize(600, 500);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    private void initComponents() {
         setLayout(new BorderLayout());
 
         detailsArea = new JTextArea();
@@ -69,13 +104,30 @@ public class TournamentGUI extends JFrame implements ActionListener {
     }
 
     private void updateButtonVisibility() {
-        startButton.setEnabled(currentUser != null);
-        advanceButton.setEnabled(currentUser != null);
-        viewLeaderboardButton.setEnabled(currentUser != null);
-        signOutButton.setEnabled(currentUser != null);
-        signInButton.setEnabled(currentUser == null);
-        usernameField.setEnabled(currentUser == null);
-        passwordField.setEnabled(currentUser == null);
+        boolean isLoggedIn = currentUser != null;
+        boolean isPlayer = isLoggedIn && currentUser.getRole() == 0;
+        boolean isAdmin = isLoggedIn && currentUser.getRole() == 2;
+        
+        // Only players can participate, anyone logged in can view
+        startButton.setEnabled(isPlayer);
+        advanceButton.setEnabled(isPlayer || isAdmin);
+        viewLeaderboardButton.setEnabled(isLoggedIn);
+        
+        // Sign in/out controls
+        signOutButton.setEnabled(isLoggedIn);
+        signInButton.setEnabled(!isLoggedIn);
+        usernameField.setEnabled(!isLoggedIn);
+        passwordField.setEnabled(!isLoggedIn);
+        createUserButton.setEnabled(isAdmin);
+        
+        // Update tooltips to explain restrictions
+        if (!isPlayer) {
+            startButton.setToolTipText("Only players can start tournaments");
+            advanceButton.setToolTipText(isAdmin ? "Admins can advance rounds" : "Only players or admins can advance rounds");
+        } else {
+            startButton.setToolTipText("");
+            advanceButton.setToolTipText("");
+        }
     }
 
     @Override

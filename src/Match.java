@@ -132,6 +132,10 @@ public class Match {
     public long getBlackTimeLeft() {
         return blackTimeLeft;
     }
+
+    public int getCurrentTurn() {
+        return isWhiteTurn ? 0 : 1;  // 0 for white's turn, 1 for black's turn
+    }
 }
 
 

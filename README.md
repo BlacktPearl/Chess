@@ -15,6 +15,48 @@ java -jar Chess.jar
 Username: `admin`  
 Password: `admin`
 
+## Stockfish Integration
+
+This application integrates with the Stockfish chess engine for move validation, position analysis, and training. To use these features, you need to install Stockfish:
+
+### Installing Stockfish
+
+#### Automatic Installation
+
+We provide scripts to automatically download and install Stockfish:
+
+**Linux/Mac:**
+```bash
+chmod +x download_stockfish.sh
+./download_stockfish.sh
+```
+
+**Windows:**
+```
+download_stockfish.bat
+```
+
+#### Manual Installation
+
+If the automatic installation doesn't work:
+
+1. Download the appropriate Stockfish version for your platform from [stockfishchess.org](https://stockfishchess.org/download/)
+2. Create a directory: `resources/stockfish/`
+3. Extract the Stockfish executable to this directory:
+   - Linux/Mac: Name the executable `stockfish`
+   - Windows: Name the executable `stockfish.exe`
+4. Make the file executable (Linux/Mac): `chmod +x resources/stockfish/stockfish`
+
+### Stockfish Features
+
+With Stockfish integrated, you can:
+
+- **Analyze Positions**: Get detailed evaluations of any board position
+- **Validate Moves**: Ensure all moves follow chess rules correctly
+- **Get Hints**: Receive move suggestions during games or training
+- **Training Mode**: Practice against Stockfish at various levels
+- **Learn Openings**: Study popular opening lines with engine analysis
+
 ## Project Structure
 
 The project is organized into the following directories:
@@ -23,8 +65,9 @@ The project is organized into the following directories:
 - **README.md** - This file (main directory)
 - **build.sh** - Build script to compile the application (main directory)
 - **users.txt** - User database (main directory)
+- **playerStats.txt** - Player statistics database (main directory)
 - **src/** - Java source code
-- **resources/** - Resource files including manifest and images
+- **resources/** - Resource files including manifest, images, and Stockfish
 - **docs/** - Documentation including user guide
 - **build/** - Compiled class files (created during build)
 
