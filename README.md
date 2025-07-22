@@ -149,12 +149,12 @@ If you encounter any issues, please refer to the USER_GUIDE.md file or contact s
 
 ## Screenshots
 
-![Chess Match](screenshots/match.png)
-![Tournament Dashboard](screenshots/dashboard.png)
-
-## Documentation
-
-For more detailed documentation, please see the docs directory or visit our [wiki](https://github.com/yourusername/chess-tournament-manager/wiki).
+![Chess Match](docs/Picture1.png)
+![Chess Match](docs/Picture2.png)
+![Chess Match](docs/Picture3.png)
+![Chess Match](docs/Picture4.png)
+![Chess Match](docs/Picture5.png)
+![Chess Match](docs/Picture6.png)
 
 ## License
 
